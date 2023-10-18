@@ -3670,18 +3670,15 @@ void rtw_cfg80211_indicate_sta_assoc(_adapter *padapter, u8 *pmgmt_frame, uint f
 
 #if defined(RTW_USE_CFG80211_STA_EVENT) || defined(COMPAT_KERNEL_RELEASE)
 	{
-		struct station_info sinfo;
+		struct station_info sinfo = {
+			.filled = STATION_INFO_ASSOC_REQ_IES,
+		};
 		u8 ie_offset;
 		if (GetFrameSubType(pmgmt_frame) == WIFI_ASSOCREQ)
 			ie_offset = _ASOCREQ_IE_OFFSET_;
 		else // WIFI_REASSOCREQ
 			ie_offset = _REASOCREQ_IE_OFFSET_;
 	
-		sinfo.filled = 0;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0))
-		sinfo.pertid = 0;
-#endif
-		sinfo.filled = STATION_INFO_ASSOC_REQ_IES;
 		sinfo.assoc_req_ies = pmgmt_frame + WLAN_HDR_A3_LEN + ie_offset;
 		sinfo.assoc_req_ies_len = frame_len - WLAN_HDR_A3_LEN - ie_offset;
 		cfg80211_new_sta(ndev, GetAddr2Ptr(pmgmt_frame), &sinfo, GFP_ATOMIC);
@@ -6470,8 +6467,6 @@ void rtw_cfg80211_init_wiphy(_adapter *padapter)
 			rtw_cfg80211_init_ht_capab(padapter, &bands->ht_cap, IEEE80211_BAND_5GHZ, rf_type);
 	}
 #endif
-	/* init regulary domain */
-	rtw_regd_init(padapter);
 
 	/* copy mac_addr to wiphy */
 	_rtw_memcpy(wiphy->perm_addr, adapter_mac_addr(padapter), ETH_ALEN);
@@ -6807,6 +6802,9 @@ struct wiphy *rtw_wiphy_alloc(_adapter *padapter, struct device *dev)
 	*((_adapter**)wiphy_priv(wiphy)) = padapter;
 
 	rtw_cfg80211_preinit_wiphy(padapter, wiphy);
+
+	/* init regulary domain */
+	rtw_regd_init(wiphy);
 
 	DBG_871X(FUNC_WIPHY_FMT"\n", FUNC_WIPHY_ARG(wiphy));
 
